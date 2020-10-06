@@ -55,6 +55,9 @@ pub(crate) fn kv_host() -> Result<(), Box<dyn Error>> {
 }
 
 pub(crate) fn propagate_error_from_provider() -> Result<(), Box<dyn Error>> {
+    // In this test the host manually triggers the dummy_actor to call a fake blobstore provider
+    // that always returns an error. The test verifies that the error is correctly propagated
+    // back to the actor and then back again to the host that initiated the call.
     let host = Host::new();
 
     let fs_binding_name = "fs_host_error_test_binding".to_string();
@@ -80,19 +83,33 @@ pub(crate) fn propagate_error_from_provider() -> Result<(), Box<dyn Error>> {
     };
     let buf = wascc_codec::serialize(config).unwrap();
 
-    //Sleep to allow for the actor thread to get ready.
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    let mut num_tries = 10;
+    let expected_error = loop {
+        //Expects the actor to trigger a call to a provider that will result in an error.
+        //If it doesn't trigger an error this call will fail in a panic.
+        let err = host
+            .call_actor(
+                "MD3U6BFGA5LT7VUQK77247Z27XF3NBCSHXTFSZIIVLG5NYVK275I4VQX",
+                wascc_codec::core::OP_INITIALIZE,
+                &buf,
+            )
+            .expect_err("Actor did not return an error as expected.");
 
-    //Expects the actor to trigger a call to a provider that will result in an error.
-    //If it doesn't trigger an error this call will fail in a panic.
-    let expected_error = host
-        .call_actor(
-            "MD3U6BFGA5LT7VUQK77247Z27XF3NBCSHXTFSZIIVLG5NYVK275I4VQX",
-            wascc_codec::core::OP_INITIALIZE,
-            &buf,
-        )
-        .expect_err("Actor did not return an error as expected.")
-        .to_string();
+        match err.kind() {
+            wascc_host::errors::ErrorKind::IO(e) if e.kind() == std::io::ErrorKind::TimedOut => {
+                if num_tries == 0 {
+                    panic!("Could not get cal through to actor.");
+                } else {
+                    num_tries -= 1;
+                    println!("looping {}", num_tries);
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                }
+            }
+            _ => {
+                break err.to_string();
+            }
+        }
+    };
 
     let expected_end_str = "dummy_container_removal: THIS IS THE WAY";
     assert!(
