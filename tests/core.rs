@@ -86,6 +86,9 @@ pub(crate) fn fs_host_error() -> Result<(), Box<dyn Error>> {
     };
     let buf = wascc_codec::serialize(config).unwrap();
 
+    //Sleep to allow for the actor thread to get ready.
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
     //Expects the actor to trigger a call to a provider that will result in an error.
     //If it doesn't trigger an error this call will fail in a panic.
     let expected_error = host
