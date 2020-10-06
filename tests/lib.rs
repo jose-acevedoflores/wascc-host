@@ -33,8 +33,8 @@ fn kv_host() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn fs_host_error() -> Result<(), Box<dyn Error>> {
-    core::fs_host_error()
+fn provider_to_actor_to_host_error() -> Result<(), Box<dyn Error>> {
+    core::provider_to_actor_to_host_error()
 }
 
 #[test]

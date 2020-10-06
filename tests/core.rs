@@ -54,7 +54,7 @@ pub(crate) fn kv_host() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub(crate) fn fs_host_error() -> Result<(), Box<dyn Error>> {
+pub(crate) fn provider_to_actor_to_host_error() -> Result<(), Box<dyn Error>> {
     let host = Host::new();
 
     let fs_binding_name = "fs_host_error_test_binding".to_string();
